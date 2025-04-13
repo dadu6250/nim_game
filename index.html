@@ -1,0 +1,269 @@
+%%html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      background: #1e1e2f;
+      color: #fff;
+      font-family: 'Courier New', monospace;
+      text-align: center;
+      padding-top: 20px;
+      margin: 0;
+    }
+    h1 {
+      color: #ffb347;
+      animation: pulse 2s infinite;
+    }
+    .row {
+      margin: 10px 0;
+    }
+    .stick {
+      display: inline-block;
+      width: 12px;
+      height: 60px;
+      margin: 3px;
+      background: linear-gradient(145deg, #8ec5fc, #e0c3fc);
+      border-radius: 5px;
+      box-shadow: 0 0 10px #ffb6c1;
+      transition: transform 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+    }
+    .stick:hover {
+      transform: scale(1.3);
+      box-shadow: 0 0 15px #ffd700;
+    }
+    #message, #current-turn {
+      font-size: 18px;
+      margin-top: 10px;
+    }
+    button {
+      padding: 8px 16px;
+      margin: 10px 5px;
+      font-size: 16px;
+      background-color: #ffb347;
+      border: none;
+      border-radius: 5px;
+      color: #1e1e2f;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background-color: #ffd700;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.03); }
+      100% { transform: scale(1); }
+    }
+    #splash {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      z-index: 100;
+      animation: fadeout 3s forwards 2.5s;
+    }
+    @keyframes fadeout {
+      to { opacity: 0; visibility: hidden; }
+    }
+    #splash h1 {
+      font-size: 28px;
+      color: #fff;
+      animation: blink 0.7s step-end infinite;
+    }
+    @keyframes blink {
+      50% { opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="splash">
+    <h1>🔥 Made with pK 😎</h1>
+  </div>
+
+  <h1>🔥 Nim Game Powered by pK 💥</h1>
+
+  <div id="choose">
+    <p>Select Mode 🎮</p>
+    <button onclick="selectMode('single')">Single Player 🤖</button>
+    <button onclick="selectMode('multi')">Two Players 👥</button>
+  </div>
+
+  <div id="level-choice" style="display:none">
+    <p>Choose Difficulty Level 💥</p>
+    <button onclick="selectFirst('easy')">Easy</button>
+    <button onclick="selectFirst('medium')">Medium</button>
+    <button onclick="selectFirst('hard')">Hard</button>
+    <button onclick="selectFirst('boss')">Boss Level (pK) 👑</button>
+  </div>
+
+  <div id="first-choice" style="display:none">
+    <p>Who Plays First? 🎮</p>
+    <button onclick="startGame('player')">You Play First</button>
+    <button onclick="startGame('computer')">pK Plays First</button>
+  </div>
+
+  <div id="nim-board"></div>
+  <div id="current-turn"></div>
+  <div id="message"></div>
+  <button onclick="restartGame()">🔁 Restart Game</button>
+
+  <script>
+    let state = [0, 0, 0];
+    let currentPlayer = "player";
+    let gameOver = false;
+    let gameMode = "single";
+    let difficulty = "easy";
+    let firstPlayer = "player";
+
+    function selectMode(mode) {
+      gameMode = mode;
+      document.getElementById("choose").style.display = "none";
+      if (mode === 'single') {
+        document.getElementById("level-choice").style.display = "block";
+      } else {
+        startGame();
+      }
+    }
+
+    function selectFirst(level) {
+      difficulty = level;
+      document.getElementById("level-choice").style.display = "none";
+      document.getElementById("first-choice").style.display = "block";
+    }
+
+    function startGame(playerFirst) {
+      firstPlayer = playerFirst;
+      state = [
+        Math.floor(Math.random() * 6) + 4,
+        Math.floor(Math.random() * 6) + 4,
+        Math.floor(Math.random() * 6) + 4,
+      ];
+      currentPlayer = firstPlayer;
+      gameOver = false;
+      document.getElementById("first-choice").style.display = "none";
+      document.getElementById("message").innerHTML = "";
+      updateBoard();
+      if (gameMode === "single" && currentPlayer === "computer") {
+        setTimeout(computerMove, 1000);
+      }
+    }
+
+    function createBoard() {
+      const board = document.getElementById("nim-board");
+      board.innerHTML = '';
+      state.forEach((count, row) => {
+        const rowDiv = document.createElement("div");
+        rowDiv.className = "row";
+        for (let i = 0; i < count; i++) {
+          const stick = document.createElement("div");
+          stick.className = "stick";
+          stick.onclick = () => {
+            if (gameOver) return;
+            if (gameMode === 'single' && currentPlayer !== "player") return;
+            state[row] = i;
+            updateBoard();
+            checkGameOver();
+            if (!gameOver) {
+              currentPlayer = (gameMode === 'multi')
+                ? (currentPlayer === 'player' ? 'player2' : 'player')
+                : 'computer';
+              updateTurnMessage();
+              if (gameMode === 'single' && currentPlayer === 'computer') {
+                setTimeout(computerMove, 800);
+              }
+            }
+          };
+          rowDiv.appendChild(stick);
+        }
+        board.appendChild(rowDiv);
+      });
+    }
+
+    function updateBoard() {
+      createBoard();
+      updateTurnMessage();
+    }
+
+    function updateTurnMessage() {
+      const turnMsg = document.getElementById("current-turn");
+      if (gameMode === 'multi') {
+        turnMsg.innerText = currentPlayer === "player" ? "👤 Player 1's Turn" : "👥 Player 2's Turn";
+      } else {
+        turnMsg.innerText = currentPlayer === "player" ? "👤 Your Turn" : "🤖 pK's Turn";
+      }
+    }
+
+    function checkGameOver() {
+      if (state.every(x => x === 0)) {
+        gameOver = true;
+        let winText = "";
+        if (gameMode === 'multi') {
+          winText = currentPlayer === "player" ? "🎉 Player 1 Wins!" : "🎉 Player 2 Wins!";
+        } else {
+          winText = currentPlayer === "player"
+            ? "🎉 You Win! 😄<br>🔥 Keep it up, Champion! Play again to master more!"
+            : "😈 pK won AGAIN 💥<br>😤 Can you beat me next time? Try harder!";
+        }
+        document.getElementById("message").innerHTML = winText;
+      }
+    }
+
+    function computerMove() {
+      let xorSum = state[0] ^ state[1] ^ state[2];
+      let actionTaken = false;
+
+      function makeRandomMove() {
+        let nonZero = state.map((v, i) => v > 0 ? i : -1).filter(x => x !== -1);
+        let randRow = nonZero[Math.floor(Math.random() * nonZero.length)];
+        if (state[randRow] > 0) state[randRow] = Math.max(0, state[randRow] - 1);
+      }
+
+      let chances = {
+        easy: 0.4,
+        medium: 0.2,
+        hard: 0.1,
+        boss: 0
+      };
+
+      if (Math.random() < chances[difficulty]) {
+        makeRandomMove();
+        actionTaken = true;
+      }
+
+      if (!actionTaken && xorSum !== 0) {
+        for (let i = 0; i < 3; i++) {
+          let target = state[i] ^ xorSum;
+          if (target < state[i]) {
+            state[i] = target;
+            break;
+          }
+        }
+      } else if (!actionTaken) {
+        makeRandomMove();
+      }
+
+      updateBoard();
+      checkGameOver();
+      if (!gameOver) currentPlayer = "player";
+      updateTurnMessage();
+    }
+
+    function restartGame() {
+      document.getElementById("choose").style.display = "block";
+      document.getElementById("level-choice").style.display = "none";
+      document.getElementById("first-choice").style.display = "none";
+      document.getElementById("nim-board").innerHTML = "";
+      document.getElementById("message").innerHTML = "";
+      document.getElementById("current-turn").innerHTML = "";
+    }
+  </script>
+</body>
+</html>
